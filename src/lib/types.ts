@@ -1,5 +1,3 @@
-import type { PortableTextBlock } from "next-sanity";
-
 export type Profile = {
   name: string;
   role: string;
@@ -16,7 +14,7 @@ export type Profile = {
   email: string;
   phone: string;
   linkedin: string;
-  /** The uploaded photo, or the default in public/. Also used as the site's logo. */
+  /** Profile photo in public/. Also used as the site's logo. */
   photoUrl: string;
   resumeUrl?: string;
 };
@@ -66,7 +64,8 @@ export type Project = {
   tech: string[];
   liveUrl?: string;
   imageUrl?: string;
-  body?: PortableTextBlock[];
+  /** Paragraphs of the case study. */
+  body?: string[];
 };
 
 export type BlogPost = {
@@ -76,7 +75,8 @@ export type BlogPost = {
   publishedAt: string;
   coverUrl?: string;
   categories?: string[];
-  body?: PortableTextBlock[];
+  /** Paragraphs of the post. */
+  body?: string[];
 };
 
 export type Testimonial = {

@@ -3,10 +3,9 @@
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { PhotoUpload } from "@/components/ui/photo-upload";
 import { PillLink } from "@/components/ui/pill-link";
 import { ArrowIcon } from "@/components/ui/section";
-import { DEFAULT_PHOTO_URL, HERO_OUTFITS } from "@/lib/site";
+import { HERO_OUTFITS } from "@/lib/site";
 import type { NowCard, Profile } from "@/lib/types";
 
 const SQUARE_COLORS = ["bg-emerald-500", "bg-orange-500", "bg-sky-500"];
@@ -20,9 +19,6 @@ const STACK = [
 ];
 
 function PhotoStack({ profile }: { profile: Profile }) {
-  // An uploaded photo takes the front card.
-  const uploaded = profile.photoUrl !== DEFAULT_PHOTO_URL;
-
   return (
     <div className="relative mx-auto h-[180px] w-full max-w-[720px] [--step:16%] sm:h-[250px] sm:[--step:23%] md:[--step:17%] lg:[--step:23%]">
       {STACK.map((card) => {
@@ -41,7 +37,7 @@ function PhotoStack({ profile }: { profile: Profile }) {
             style={{ left: `calc(${card.x} * var(--step))`, rotate: card.rotate, zIndex: card.z }}
           >
             <Image
-              src={card.x === 0 && uploaded ? profile.photoUrl : HERO_OUTFITS[card.x]}
+              src={HERO_OUTFITS[card.x]}
               alt={card.x === 0 ? profile.name : ""}
               fill
               priority={card.x === 0}
@@ -78,9 +74,6 @@ export function Hero({ profile, cards, currentRole }: {
           </p>
           <div className="mt-10">
             <PhotoStack profile={profile} />
-            <div className="flex justify-center md:justify-start">
-              <PhotoUpload />
-            </div>
           </div>
         </div>
 

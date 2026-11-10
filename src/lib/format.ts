@@ -21,12 +21,9 @@ export function formatFullDate(isoDate: string): string {
 
 const WORDS_PER_MINUTE = 200;
 
-/** Reading time for rich text, rounded up, and never below one minute. */
-export function estimateReadMinutes(body: { children?: object[] }[] = []): number {
-  const words = body
-    .flatMap((block) => block.children ?? [])
-    .flatMap((child) => ("text" in child ? String(child.text) : "").trim().split(/\s+/))
-    .filter(Boolean).length;
+/** Reading time for a list of paragraphs, rounded up, and never below one minute. */
+export function estimateReadMinutes(body: string[] = []): number {
+  const words = body.flatMap((paragraph) => paragraph.trim().split(/\s+/)).filter(Boolean).length;
   return Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
 }
 

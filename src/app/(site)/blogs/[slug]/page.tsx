@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { PortableText } from "next-sanity";
 import { Container, Eyebrow } from "@/components/ui/section";
 import { getContent } from "@/lib/content";
 import { formatMonthYear } from "@/lib/format";
@@ -45,7 +44,9 @@ export default async function PostPage({ params }: Props) {
       )}
       {post.body && (
         <div className="rich-text mt-10 leading-relaxed">
-          <PortableText value={post.body} />
+          {post.body.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
         </div>
       )}
     </Container>

@@ -2,9 +2,8 @@ import { DEFAULT_PHOTO_URL } from "../src/lib/site";
 import type { SiteContent } from "../src/lib/types";
 
 /**
- * Content taken from Luigi_Chelini_Resume.pdf. It seeds Sanity, and previews the
- * site locally when no Sanity project is configured. Sanity is the source of truth
- * once connected, so edit content in Studio rather than here.
+ * Content taken from Luigi_Chelini_Resume.pdf. This is the site's only content
+ * source, so edit it here and redeploy.
  */
 export const resume: SiteContent = {
   profile: {

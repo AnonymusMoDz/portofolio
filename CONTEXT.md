@@ -23,7 +23,3 @@ _Avoid_: Disabled, coming soon
 **Launch**:
 The first production deployment, which requires Experience supporting the "8+ years" claim. Preview deployments are not Launch.
 _Avoid_: Go-live, release
-
-**Studio**:
-The login-protected editing dashboard where Luigi manages all content, including the profile photo.
-_Avoid_: Admin, CMS page

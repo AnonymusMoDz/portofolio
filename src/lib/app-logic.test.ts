@@ -1,21 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { HERO_OUTFITS } from "./site";
-import { evaluate, parse } from "groq-js";
 import { describe, expect, it } from "vitest";
-import { buildSeedDocuments } from "@seed/documents";
 import { resume } from "@seed/resume";
-import { mapSiteContent, type RawSiteContent } from "@/sanity/map";
-import { SITE_CONTENT_QUERY } from "@/sanity/queries";
 import { buildContactMailto } from "./contact";
 import { estimateReadMinutes, formatFullDate, formatPeriod, formatPhone, repeatToFill, shortSkillNames } from "./format";
 import { supportsYearsClaim } from "./launch";
 import { buildNav } from "./navigation";
-import { checkPhoto, MAX_PHOTO_BYTES } from "./photo";
-import { createLoginLimiter } from "./rate-limit";
-import { createSessionToken, isCorrectPassword, isValidSessionToken } from "./session";
 import { techMentioned } from "./tech-mentions";
-
-const SECRET = "x".repeat(32);
 
 describe("launch check", () => {
   const now = new Date("2026-11-03T00:00:00Z");
@@ -63,70 +54,6 @@ describe("tech chips", () => {
   });
 });
 
-describe("session", () => {
-  it("accepts its own token until it expires", () => {
-    const token = createSessionToken(SECRET, 1000) as string;
-    expect(isValidSessionToken(token, SECRET, 1001)).toBe(true);
-    expect(isValidSessionToken(token, SECRET, 1000 + 9 * 60 * 60 * 1000)).toBe(false);
-  });
-
-  it("rejects tampered tokens, other secrets and missing tokens", () => {
-    const token = createSessionToken(SECRET, 1000) as string;
-    const [, signature] = token.split(".");
-    expect(isValidSessionToken(`9999999999999.${signature}`, SECRET, 1001)).toBe(false);
-    expect(isValidSessionToken(token, "y".repeat(32), 1001)).toBe(false);
-    expect(isValidSessionToken(undefined, SECRET)).toBe(false);
-  });
-
-  it("refuses a short or missing secret", () => {
-    expect(createSessionToken("short")).toBeNull();
-    expect(createSessionToken(undefined)).toBeNull();
-    expect(isValidSessionToken("1.a", undefined)).toBe(false);
-  });
-
-  it("fails sign-in when no password is configured", () => {
-    expect(isCorrectPassword("", undefined)).toBe(false);
-    expect(isCorrectPassword("anything", "")).toBe(false);
-    expect(isCorrectPassword("wrong", "right")).toBe(false);
-    expect(isCorrectPassword("right", "right")).toBe(true);
-  });
-});
-
-describe("login limiter", () => {
-  it("blocks after 5 failures, then clears after the window", () => {
-    const limiter = createLoginLimiter();
-    for (let i = 0; i < 5; i += 1) limiter.recordFailure("ip", 0);
-    expect(limiter.isBlocked("ip", 1)).toBe(true);
-    expect(limiter.isBlocked("other", 1)).toBe(false);
-    expect(limiter.isBlocked("ip", 15 * 60 * 1000 + 1)).toBe(false);
-  });
-});
-
-describe("photo check", () => {
-  const withBytes = (...bytes: number[]) => new Uint8Array([...bytes, ...new Array(20).fill(0)]);
-  const ascii = (text: string) => [...text].map((char) => char.charCodeAt(0));
-
-  it("identifies allowed formats from their bytes", () => {
-    expect(checkPhoto(withBytes(0xff, 0xd8, 0xff))).toEqual({ ok: true, type: "image/jpeg" });
-    expect(checkPhoto(withBytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))).toEqual({
-      ok: true,
-      type: "image/png",
-    });
-    expect(checkPhoto(withBytes(...ascii("RIFF"), 0, 0, 0, 0, ...ascii("WEBP")))).toEqual({
-      ok: true,
-      type: "image/webp",
-    });
-  });
-
-  it("rejects other formats, empty files and oversized files", () => {
-    expect(checkPhoto(withBytes(...ascii("<svg")))).toMatchObject({ ok: false, status: 415 });
-    expect(checkPhoto(new Uint8Array())).toMatchObject({ ok: false, status: 400 });
-    const oversized = new Uint8Array(MAX_PHOTO_BYTES + 1);
-    oversized.set([0xff, 0xd8, 0xff]);
-    expect(checkPhoto(oversized)).toMatchObject({ ok: false, status: 413 });
-  });
-});
-
 describe("contact form", () => {
   it("builds an encoded mailto link with the visitor's details", () => {
     const link = buildContactMailto("me@example.com", { name: "A & B", email: "a@b.co", message: "Hi?" });
@@ -147,7 +74,7 @@ describe("formatting", () => {
   it("estimates read time, with a one-minute minimum", () => {
     expect(estimateReadMinutes(undefined)).toBe(1);
     const words = Array.from({ length: 450 }, () => "word").join(" ");
-    expect(estimateReadMinutes([{ children: [{ text: words }] }])).toBe(3);
+    expect(estimateReadMinutes([words])).toBe(3);
   });
 
   it("formats a full date", () => {
@@ -189,60 +116,5 @@ describe("resume content", () => {
     for (const term of ["naseem", "rawalpindi", "bulkup", "visric", "ivan", "torrente", "globant", "infosys", "interpublic"]) {
       expect(text).not.toContain(term);
     }
-  });
-});
-
-describe("Sanity query", () => {
-  async function runQuery(extra: Record<string, unknown>[] = []) {
-    const dataset = [...buildSeedDocuments(resume), ...extra];
-    const result = await evaluate(parse(SITE_CONTENT_QUERY), { dataset });
-    return (await result.get()) as RawSiteContent;
-  }
-
-  const imageUrl = (source: unknown) => (source ? "https://cdn.sanity.io/image.jpg" : undefined);
-
-  it("returns seeded documents in resume order, matching the local preview", async () => {
-    const content = mapSiteContent(await runQuery(), imageUrl);
-    expect(content.skills).toEqual(resume.skills);
-    expect(content.experience).toEqual(resume.experience);
-    expect(content.selectedWork).toEqual(resume.selectedWork);
-    expect(content.education).toEqual(resume.education);
-    expect(content.languages).toEqual(resume.languages);
-    expect(content.nowCards).toEqual(resume.nowCards);
-    expect(content.profile.email).toBe(resume.profile.email);
-    expect(content.profile.photoUrl).toBe("/photos/luigi-chelini.jpg");
-    expect(content.posts).toEqual([]);
-    expect(content.testimonials).toEqual([]);
-  });
-
-  it("sorts older Experience after newer roles", async () => {
-    const raw = await runQuery([
-      { _id: "early", _type: "experience", title: "Early", company: "A", location: "B", start: "2015-01-01" },
-    ]);
-    expect(mapSiteContent(raw, imageUrl).experience.at(-1)?.title).toBe("Early");
-  });
-
-  it("maps a published photo and post", async () => {
-    const raw = await runQuery([
-      {
-        _id: "post",
-        _type: "blogPost",
-        title: "Post",
-        slug: { current: "post" },
-        excerpt: "E",
-        publishedAt: "2026-01-01",
-      },
-    ]);
-    raw.profile.photo = { asset: { _ref: "image-abc-10x10-jpg" } };
-    const content = mapSiteContent(raw, imageUrl);
-    expect(content.profile.photoUrl).toBe("https://cdn.sanity.io/image.jpg");
-    expect(content.posts[0].slug).toBe("post");
-    expect(content.posts[0].coverUrl).toBeUndefined();
-  });
-
-  it("gives a clear error when Sanity hasn't been seeded", () => {
-    expect(() =>
-      mapSiteContent({ profile: null } as unknown as RawSiteContent, imageUrl),
-    ).toThrow(/npm run seed/);
   });
 });

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { PortableText } from "next-sanity";
 import { Container, Eyebrow } from "@/components/ui/section";
 import { TechChip } from "@/components/ui/tech-icon";
 import { getContent } from "@/lib/content";
@@ -60,7 +59,9 @@ export default async function ProjectPage({ params }: Props) {
       )}
       {project.body && (
         <div className="rich-text mt-10 leading-relaxed">
-          <PortableText value={project.body} />
+          {project.body.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
         </div>
       )}
     </Container>
